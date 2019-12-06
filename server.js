@@ -6,11 +6,13 @@ const bodyParser = require('body-parser');
 const methodOverride = require('method-override');
 const crypto = require("crypto");
 const path  = require('path');
+const cors = require('cors');
 const PORT = process.env.PORT || 3000;
 const mongodbConnectionString = 'mongodb+srv://admin:server@cluster0-0r1vk.mongodb.net/uploadFiles?retryWrites=true&w=majority';
 const app = express();
 
 // Middleware
+app.use(cors());
 app.use(bodyParser.json());
 app.use(methodOverride('_method'));
 app.set('view engine', 'ejs');
