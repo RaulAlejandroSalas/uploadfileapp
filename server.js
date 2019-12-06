@@ -6,6 +6,7 @@ const bodyParser = require('body-parser');
 const methodOverride = require('method-override');
 const crypto = require("crypto");
 const path  = require('path');
+const PORT = process.env.PORT || 3000;
 const mongodbConnectionString = 'mongodb+srv://admin:server@cluster0-0r1vk.mongodb.net/uploadFiles?retryWrites=true&w=majority';
 const app = express();
 
@@ -114,6 +115,4 @@ app.delete('/files/:id', (req, res) => {
     });
 });
 
-app.listen(3000, () => {
-    console.log("Server is running in port 3000")
-})
+app.listen(PORT, () => console.log(`Listening on ${PORT}`));
