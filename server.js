@@ -13,11 +13,18 @@ const mongodbConnectionString = 'mongodb+srv://admin:server@cluster0-0r1vk.mongo
 const app = express();
 
 // Middleware
-app.use(function (req, res, next) {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-    next();
-});
+// app.use(function (req, res, next) {
+//     res.header("Access-Control-Allow-Origin", "*");
+//     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+//     next();
+// });
+app.use(cors({
+    "origin": "*",
+    "methods": "GET,HEAD,PUT,PATCH,POST,DELETE",
+    "preflightContinue": false,
+    "optionsSuccessStatus": 204,
+    "exposedHeaders": "Content-Range,X-Content-Range"
+}))
 app.use(bodyParser.json());
 app.use(methodOverride('_method'));
 app.set('view engine', 'ejs');
@@ -107,16 +114,30 @@ app.get('/files/:filename', (req, res) => {
             res.status(500).send(error);
         }
         if (files.length > 0) {
-            console.log(files[0]);
             var mime = files[0].contentType;
             var filename = files[0].filename;
-            res.set('Content-Type', mime);
-            res.set('Cache-Control', 'public, max-age=31557600');
-            res.set('Content-Disposition', "inline; filename=" + filename);
-            res.set('Accept-Ranges', 'bytes');
-            res.set('Content-Length', files[0].length);
+            const range = req.headers.range;
+            if (range && typeof range === "string") {
+                const parts = range.replace(/bytes=/, "").split("-");
+                const partialstart = parts[0];
+                const partialend = parts[1];
+                const start = parseInt(partialstart, 10);
+                const end = partialend ? parseInt(partialend, 10) : files[0].length - 1;
+                const chunksize = (end - start) + 1;
+                res.writeHead(206, {
+                    'Accept-Ranges': 'bytes',
+                    'Content-Length': chunksize,
+                    'Content-Disposition':"inline; filename=" + filename,
+                    'Content-Range': 'bytes ' + start + '-' + end + '/' + files[0].length,
+                    'Content-Type': mime
+                });
+                gridfs.openDownloadStreamByName(req.params.filename, {start, end: end - 1}).pipe(res);
+            } else {
+                res.header('Content-Length', files[0].length);
+                res.header('Content-Type', mime);
+                gridfs.openDownloadStreamByName(req.params.filename).pipe(res);
+            }
 
-            gridfs.openDownloadStreamByName(req.params.filename).pipe(res);
         } else {
             res.json('File Not Found');
         }
