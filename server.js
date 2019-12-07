@@ -13,7 +13,11 @@ const mongodbConnectionString = 'mongodb+srv://admin:server@cluster0-0r1vk.mongo
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(function (req, res, next) {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    next();
+});
 app.use(bodyParser.json());
 app.use(methodOverride('_method'));
 app.set('view engine', 'ejs');
@@ -103,16 +107,21 @@ app.get('/files/:filename', (req, res) => {
             res.status(500).send(error);
         }
         if (files.length > 0) {
+            console.log(files[0]);
             var mime = files[0].contentType;
             var filename = files[0].filename;
             res.set('Content-Type', mime);
+            res.set('Cache-Control', 'public, max-age=31557600');
             res.set('Content-Disposition', "inline; filename=" + filename);
+            res.set('Accept-Ranges', 'bytes');
+            res.set('Content-Length', files[0].length);
+
             gridfs.openDownloadStreamByName(req.params.filename).pipe(res);
         } else {
             res.json('File Not Found');
         }
     })
-   
+
 });
 
 // @route DELETE /files/:id
