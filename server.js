@@ -5,7 +5,8 @@ const GridFsStorage = require('multer-gridfs-storage');
 const bodyParser = require('body-parser');
 const methodOverride = require('method-override');
 const crypto = require("crypto");
-const path  = require('path');
+const fs = require('fs');
+const path = require('path');
 const cors = require('cors');
 const PORT = process.env.PORT || 3000;
 const mongodbConnectionString = 'mongodb+srv://admin:server@cluster0-0r1vk.mongodb.net/uploadFiles?retryWrites=true&w=majority';
@@ -78,34 +79,40 @@ app.post('/upload', upload.single('file'), (req, res) => {
 // @desc Display Image
 app.get('/image/:filename', (req, res) => {
     const file = gridfs
-    .find({
-      filename: req.params.filename
-    })
-    .toArray((err, files) => {
-      if (!files || files.length === 0) {
-        return res.status(404).json({
-          err: "no files exist"
+        .find({
+            filename: req.params.filename
+        })
+        .toArray((err, files) => {
+            if (!files || files.length === 0) {
+                return res.status(404).json({
+                    err: "no files exist"
+                });
+            }
+            gridfs.openDownloadStreamByName(req.params.filename).pipe(res);
         });
-      }
-      gridfs.openDownloadStreamByName(req.params.filename).pipe(res);
-    });
 });
+
 
 // @route GET /files/:filename
 // @desc  Display single file object
 app.get('/files/:filename', (req, res) => {
-    const file = gridfs
-    .find({
-      filename: req.params.filename
+    gridfs.find({
+        filename: req.params.filename
+    }).toArray((error, files) => {
+        if (error) {
+            res.status(500).send(error);
+        }
+        if (files.length > 0) {
+            var mime = files[0].contentType;
+            var filename = files[0].filename;
+            res.set('Content-Type', mime);
+            res.set('Content-Disposition', "inline; filename=" + filename);
+            gridfs.openDownloadStreamByName(req.params.filename).pipe(res);
+        } else {
+            res.json('File Not Found');
+        }
     })
-    .toArray((err, files) => {
-      if (!files || files.length === 0) {
-        return res.status(404).json({
-          err: "no files exist"
-        });
-      }
-      gridfs.openDownloadStreamByName(req.params.filename).pipe(res);
-    });
+   
 });
 
 // @route DELETE /files/:id
